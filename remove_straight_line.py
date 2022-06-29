@@ -5,7 +5,7 @@ from PIL import Image, ImageFilter
 
 DEBUG = 1
 
-for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines/plots/**/*.png', recursive=True):
+for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines/Line Map/**/*.png', recursive=True):
     print(filename)
     # Read in image, grayscale, and Otsu's threshold
     # image = cv2.imread(filename)
@@ -17,7 +17,7 @@ for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines
     # Median filter to remove outliers
     im = im.filter(ImageFilter.MedianFilter(3))
 
-    # Find X,Y coordinates of all yellow pixels
+    # Find X,Y coordinates of all blue pixels
     yellowY, yellowX = np.where(np.all(na==[229,236,246],axis=2))
 
     top, bottom = yellowY[0], yellowY[-1]
@@ -27,6 +27,18 @@ for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines
     # Extract Region of Interest from unblurred original
     orig= cv2.cvtColor(orig, cv2.COLOR_BGR2RGB)
     image = orig[top:bottom, left:right]
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # create mask for blue color in hsv
+    # blue is 240 in range 0 to 360, so for opencv it would be 120
+    lower = (100,100,100)
+    upper = (160,180,255)
+    mask = cv2.inRange(hsv, lower, upper)
+    cv2.imshow("hsv", mask)
+
+    # count non-zero pixels in mask
+    travelled =np.count_nonzero(mask)
+    print('count:', travelled)
 
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -58,8 +70,11 @@ for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines
         # cv2.drawContours(opening, [c], -1, (0,255,255), -1)
 
     cv2.putText(opening, "Working Area: {}".format(working_area), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
-    cv2.putText(opening, "Total Area: {}".format(image.shape[0]*image.shape[1]), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
-    cv2.putText(opening, "Ratio: {}".format(working_area/(image.shape[0]*image.shape[1])*100), (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
+    cv2.putText(opening, f"Total Traveled: {travelled}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
+    # cv2.putText(opening, "Total Area: {}".format(image.shape[0]*image.shape[1]), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
+    try:ratio = working_area/travelled*100
+    except:ratio = "N/A"
+    cv2.putText(opening, f"Ratio: {ratio}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
     # # draw line in 10% of x axis
     # cv2.line(opening, (int(image.shape[1]*0.08), 0), (int(image.shape[1]*0.08), image.shape[0]), (255,255,255), 2)
     # # draw a horizontal line in 11% of y axis
@@ -79,4 +94,4 @@ for filename in glob.glob('/Users/munyoudoum/Desktop/compute_vision/remove_lines
         cv2.imshow('result', result)
         cv2.waitKey()
     filename = "_".join(filename.rsplit(".",1)[0].rsplit("/")[-2:])
-    # cv2.imwrite("/Users/munyoudoum/Desktop/compute_vision/remove_lines/processed_images/"+filename+"_test.png", result)
+    cv2.imwrite(f"/Users/munyoudoum/Desktop/compute_vision/remove_lines/Line Map Processed/{filename}_(area={working_area}).png", result)
